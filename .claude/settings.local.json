@@ -6,7 +6,8 @@
       "Bash(.venv/bin/python -)",
       "Bash(.venv/bin/python -m pytest -q)",
       "Bash(git add *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(.venv/bin/python -m pytest tests/test_magnetics.py -q)"
     ]
   }
 }

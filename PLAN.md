@@ -109,15 +109,31 @@ on exit (force backward). No special-casing.
 ### Effective permeability
 
 Bulk `mu_r` is wrong for a short rod in an open magnetic circuit — the demagnetising
-factor dominates. For a rod of aspect ratio `m = proj_len / proj_dia`:
+factor dominates. For a prolate spheroid of aspect ratio `m = proj_len / proj_dia`:
 
 ```
-N_d     ~ (1/m^2) * (ln(2m) - 1)
+N_d     = (1/(m^2-1)) * ( (m/sqrt(m^2-1)) * ln(m + sqrt(m^2-1)) - 1 )
 mu_eff  = mu_r / (1 + N_d*(mu_r - 1))
 ```
 
+The exact expression is used, not the commonly quoted asymptotic form
+`(1/m^2)*(ln(2m) - 1)`, which is 20% low at `m = 2.9` and 81% low at `m = 1.5`.
+
 At the current design point (17.5 mm x 6 mm slug, carbon steel `mu_r = 100`):
-`m = 2.92`, `N_d = 0.090`, **`mu_eff = 10.1`** — not 100.
+`m = 2.92`, `N_d = 0.1125`, **`mu_eff = 8.24`** — not 100.
+
+A real cylinder is not a spheroid; a measured `L_slug_in` should override this once
+bench data exists (see Calibration).
+
+**Consequence for inductance.** The slug fills 37% of the bore area and, at a 2:1 coil
+ratio, at most half the coil length, so `max fill = 0.169` and
+
+```
+L: 56.8 uH (empty) -> 133.1 uH (slug in)  =  2.35x
+```
+
+v1 asserted a **100x** swing. A 2.35x swing keeps the circuit in one damping regime for
+the whole shot, which is a qualitatively different simulation.
 
 `mu_eff` now depends on slug geometry, so aspect ratio becomes a sweepable design
 variable.
@@ -128,21 +144,30 @@ variable.
 i_sat = B_sat * l_coil / (mu_0 * mu_eff * N)
 ```
 
-At `B_sat = 1.6 T`, `l = 35 mm`, `N = 150`, `mu_eff = 10.1`: **`i_sat = 29 A`**.
+At `B_sat = 1.6 T`, `l = 35 mm`, `N = 150`, `mu_eff = 8.24`: **`i_sat = 36 A`**.
 
 The v1 design point runs at 280 A peak. Linear theory implies:
 
 | current | implied B in slug | vs B_sat |
 |---|---|---|
-| 29 A | 1.6 T | 1.0x |
-| 100 A | 5.5 T | 3.4x |
-| 280 A | 15.3 T | **9.5x** |
-| 450 A | 24.5 T | **15.3x** |
+| 36 A | 1.6 T | 1.0x |
+| 100 A | 4.4 T | 2.8x |
+| 280 A | 12.4 T | **7.8x** |
+| 450 A | 20.0 T | **12.5x** |
 
-The current operating point is roughly an order of magnitude into saturation. Expect the
-rebuilt model to predict substantially lower performance, and expect "add more current"
-to stop being a useful optimisation direction. Getting this right is the difference
-between a tool that guides the design and one that flatters it.
+The current operating point is roughly an order of magnitude into saturation.
+
+**Force has two regimes**, and the crossover is the reason to model this at all:
+
+- below `i_sat` the slug's magnetisation tracks the applied field, so both the moment and
+  the gradient scale with `i`, giving `F ~ i^2`
+- above it the moment is pinned at `M_sat`, so `F = m.grad(B)` scales with the gradient
+  alone, giving `F ~ i`
+
+v1 had `F ~ i^2` without bound, so more current always looked better. Expect the rebuilt
+model to predict substantially lower performance and to show sharply diminishing returns
+above ~36 A. Getting this right is the difference between a tool that guides the design
+and one that flatters it.
 
 ### Circuit
 
