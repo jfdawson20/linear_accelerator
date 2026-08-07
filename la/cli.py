@@ -63,6 +63,8 @@ def build_parser() -> argparse.ArgumentParser:
                     help="include configurations above the winding limit")
     sw.add_argument("--max-suck-back", type=float, default=None,
                     metavar="PCT", help="reject points above this suck-back %%")
+    sw.add_argument("--max-current", type=float, default=None,
+                    metavar="A", help="reject points above this peak current")
     sw.add_argument("--workers", type=int, default=None,
                     help="parallel workers (default: all cores)")
     sw.add_argument("--top", type=int, default=20,
@@ -248,6 +250,7 @@ def run_sweep(args: argparse.Namespace) -> int:
         objective=args.objective,
         thermal_limit=not args.allow_overheat,
         max_suck_back_pct=args.max_suck_back,
+        max_current=args.max_current,
     )
     failed = [r for r in results if not r.ok]
     rejected = len(results) - len(ranked) - len(failed)

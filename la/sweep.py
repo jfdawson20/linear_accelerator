@@ -258,11 +258,13 @@ def rank(
     objective: str = "velocity",
     thermal_limit: bool = True,
     max_suck_back_pct: float | None = None,
+    max_current: float | None = None,
 ) -> list[SweepResult]:
     """Sort viable results best-first.
 
     Constraints matter as much as the objective: a configuration that cooks its
-    windings is not a design, and v1 had no way to express that.
+    windings or exceeds the switch rating is not a design, and v1 had no way to
+    express either.
     """
     if objective not in OBJECTIVES:
         raise ValueError(f"unknown objective {objective!r}; {sorted(OBJECTIVES)}")
@@ -270,6 +272,8 @@ def rank(
     viable = [r for r in results if r.ok]
     if thermal_limit:
         viable = [r for r in viable if r.within_thermal_limit]
+    if max_current is not None:
+        viable = [r for r in viable if r.peak_current <= max_current]
     if max_suck_back_pct is not None:
         viable = [r for r in viable if r.suck_back_pct <= max_suck_back_pct]
     return sorted(viable, key=key, reverse=True)

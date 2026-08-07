@@ -15,7 +15,8 @@
       "Bash(.venv/bin/python -m la.cli run -s 1)",
       "Bash(.venv/bin/python -m la.cli run -s 1 --dt 5e-5)",
       "Bash(git rm *)",
-      "Bash(.venv/bin/python -m pytest tests/test_calibration.py -q)"
+      "Bash(.venv/bin/python -m pytest tests/test_calibration.py -q)",
+      "Bash(.venv/bin/python -m pytest tests/test_sweep.py -q)"
     ]
   }
 }
