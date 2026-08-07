@@ -1,0 +1,24 @@
+# Template for bench data. Copy to measurements/stage0.yaml and fill in
+# whatever you have -- every field is optional and absent fields are skipped.
+#
+# Highest value first measurement: L_air and L_slug_in together. Those two
+# numbers pin mu_eff directly, which is the largest remaining uncertainty in
+# the model (the demagnetising factor is computed for a prolate spheroid, and
+# a real cylinder differs). Five minutes with an LCR meter settles it.
+
+coil_id: stage0
+
+measured:
+  L_air:         58.2e-6     # H,    LCR meter, no slug in the bore
+  L_slug_in:     410e-6      # H,    LCR meter, slug centred in the coil
+  R_dc:          0.671       # ohm,  four-wire measurement
+  peak_current:  262         # A,    from a current-probe scope shot
+  exit_velocity: 41.3        # m/s,  chronograph
+
+conditions:
+  V0: 200                    # V,   bank voltage for the dynamic measurements
+  C:  0.006                  # F
+  ambient_C: 22
+
+traces:
+  current: traces/stage0_i.csv   # optional two-column CSV: t,i
