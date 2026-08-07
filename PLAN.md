@@ -268,55 +268,59 @@ largest remaining uncertainty in the model.
 Each phase leaves the tool runnable. Separate commits, straight to `main`.
 
 ### Phase 0 — Safety net
-- [ ] `requirements.txt` (prettytable, matplotlib, numpy, pyyaml, pytest)
-- [ ] Capture v1 output across several configs to `baseline/` — wrong numbers, but the
+- [x] `requirements.txt` (prettytable, matplotlib, numpy, pyyaml, pytest)
+- [x] Capture v1 output across several configs to `baseline/` — wrong numbers, but the
       reference for "did this change what I expected"
 
 ### Phase 1 — Structural floor
 No physics changes.
-- [ ] `la/` package skeleton
-- [ ] Config dataclasses replace string-keyed dicts (kills the `tmp = cfg` aliasing bug)
-- [ ] Add `proj_len`, `proj_density`, `mu_r`, `B_sat`, `switch_latency`, `diode_vf` —
+- [x] `la/` package skeleton
+- [x] Config dataclasses replace string-keyed dicts (kills the `tmp = cfg` aliasing bug)
+- [x] Add `proj_len`, `proj_density`, `mu_r`, `B_sat`, `switch_latency`, `diode_vf` —
       defined now, wired up in Phase 2. Mass becomes derived.
-- [ ] Delete `Exec`, `timeToTargetI`, `Projectile.update`, `CoilCircuit.StepCircuit`
-- [ ] Reporting out of constructors (`Coil.__init__` currently prints a 25-row table)
-- [ ] Fix global-`sim`-instead-of-`self`, and `bool("False") == True` in argparse
-- [ ] `wire.py` + `geometry.py` land in final form (they survive Phase 2 unchanged)
+- [x] Delete `Exec`, `timeToTargetI`, `Projectile.update`, `CoilCircuit.StepCircuit`
+- [x] Reporting out of constructors (`Coil.__init__` currently prints a 25-row table)
+- [x] Fix global-`sim`-instead-of-`self`, and `bool("False") == True` in argparse
+- [x] `wire.py` + `geometry.py` land in final form (they survive Phase 2 unchanged)
 
 ### Phase 2 — Physics core
-- [ ] 2a RK4 state-space integration; delete `getCurrent`
-- [ ] 2b Force from co-energy gradient; delete the reluctance formula and `airGap`
-- [ ] 2c `lambda(x,i)` from slug/coil overlap; delete the `exp(-log(mu_r)/l * x)` ramp
-- [ ] 2d `mu_eff` via demagnetising factor + `tanh` saturation law
-- [ ] 2e Switch model with freewheel decay
-- [ ] 2f Trigger/control with sensor and switch latency
+- [x] 2a RK4 state-space integration; delete `getCurrent`
+- [x] 2b Force from co-energy gradient; delete the reluctance formula and `airGap`
+- [x] 2c `lambda(x,i)` from slug/coil overlap; delete the `exp(-log(mu_r)/l * x)` ramp
+- [x] 2d `mu_eff` via demagnetising factor + `tanh` saturation law
+- [x] 2e Switch model with freewheel decay
+- [x] 2f Trigger/control with sensor and switch latency
 
 ### Phase 3 — Supporting models
-- [ ] Insulated magnet-wire OD (26 AWG: 0.43 mm, not 0.404)
-- [ ] Wire length uses layer *centres*, not inner surfaces
-- [ ] `R(T) = R_20*(1 + 0.00393*(T-20))` — ~16% over a 40 C rise
-- [ ] Thermal integrated on absolute time, gated on coil-on. Onderdonk math itself is
+- [x] Insulated magnet-wire OD (26 AWG: 0.43 mm, not 0.404)
+- [x] Wire length uses layer *centres*, not inner surfaces
+- [x] `R(T) = R_20*(1 + 0.00393*(T-20))` — ~16% over a 40 C rise
+- [x] Thermal integrated on absolute time, gated on coil-on. Onderdonk math itself is
       correct — leave it alone
-- [ ] Reporting fixes: `s[st]` indexing samples by stage number; "Min Inductance" reading
+- [x] Reporting fixes: `s[st]` indexing samples by stage number; "Min Inductance" reading
       `s[0]`; `plotData` always using `abstimes[0]`
-- [ ] Run length from geometry, not `while x < 1`; stall guard
+- [x] Run length from geometry, not `while x < 1`; stall guard
 
 ### Phase 4 — Validation
-- [ ] Energy audit printed every run: `E_cap_spent`, `E_kinetic`, `E_resistive`,
+- [x] Energy audit printed every run: `E_cap_spent`, `E_kinetic`, `E_resistive`,
       `E_magnetic_residual`, `E_diode`. Assert closure < 1%
-- [ ] Efficiency as a headline number (sanity: 1-5%)
-- [ ] pytest:
-  - [ ] constant-L RLC integration vs closed-form (v1's `getCurrent` math is a valid
+- [x] Efficiency as a headline number (sanity: 1-5%)
+- [x] pytest:
+  - [x] constant-L RLC integration vs closed-form (v1's `getCurrent` math is a valid
         oracle for constant L)
-  - [ ] **zero net impulse** — a slug passing fully through a DC-energised coil gains
+  - [x] **zero net impulse** — a slug passing fully through a DC-energised coil gains
         ~zero net momentum. Hard invariant; strongest test that suck-back is right
-  - [ ] `lambda(x,i)` symmetric about coil centre
-  - [ ] **linear limit** — saturating vs non-saturating agree < 0.1% at `i = 0.01*i_sat`
-  - [ ] Wheeler and Onderdonk against published reference values
-  - [ ] energy closure over a full multi-stage run
-- [ ] Convergence: halve `dt`, exit velocity moves < 0.5%
+  - [x] `lambda(x,i)` symmetric about coil centre
+  - [x] **linear limit** — saturating vs non-saturating agree < 0.1% at `i = 0.01*i_sat`
+  - [x] Wheeler and Onderdonk against published reference values
+  - [x] energy closure over a full multi-stage run
+- [x] Convergence: halve `dt`, exit velocity moves < 0.5%
 
-### Phase 5 — Optimiser
+### Phase 5 — Optimiser (remaining)
+
+Note: Phase 3 was absorbed entirely into Phases 1-2. The full-suite runtime (~50 s)
+is dominated by the Python-level integrator loop, which is what item 1 addresses.
+
 - [ ] Performance: numpy arrays / flat records, not one dict per stage per timestep;
       `record=False` summary-only mode
 - [ ] Rewrite `Optimize` (currently crashes: missing `self.`, list indexed by string)
@@ -326,6 +330,57 @@ No physics changes.
       the variation commented out)
 
 ---
+
+---
+
+## Results after the rebuild
+
+Default 8-stage design (35 mm coils, 150 turns 26 AWG, 6 mF at 200 V, 2:1 slug).
+
+| | v1 | v2 | |
+|---|---|---|---|
+| Exit velocity | 295 m/s | 47.5 m/s | |
+| Efficiency | 26% | 0.46% | v1 was not physically possible |
+| Energy closure | not checked | 0.0000% | new invariant |
+| Suck-back | unmodellable | 0.03% of forward impulse | |
+
+Saturation alone accounts for 43% of exit velocity (83.6 m/s linear -> 47.5 m/s
+saturating). Peak current runs 7.5x `i_sat`.
+
+### The design premise holds — but not for the stated reason
+
+Force reverses when the **slug's centre** meets the **coil's centre**, at a nose position
+of `(Lc + Lp)/2 = 26.25 mm` — not at the coil midpoint (17.5 mm). With an extended slug
+there is no axial force at all while it is fully enclosed, because the interior field is
+uniform. So the deadline is 26.25 mm, and turn-off is commanded at 17.5 mm: **8.75 mm of
+margin, not the ~0 the premise assumed.**
+
+The field does *not* fully collapse in that distance. From stage 1 onward the current is
+still flowing when force reverses — margin runs from -3.8 mm at stage 1 to -20 mm at
+stage 7, because the L/R decay time is fixed while the projectile gets faster. What saves
+the design is that the *residual* current by then is small, and force scales with current
+once saturated. Suck-back costs 0.03% of forward impulse.
+
+This is a conditional pass. It depends on the current being well decayed, not on the
+geometry alone, and it would degrade at higher velocity or with a faster-rising bank.
+
+### Capacitor sizing is the live design question
+
+4-stage sweep at 200 V:
+
+| C | alpha/w0 | J/stage | exit v | efficiency | winding heat |
+|---|---|---|---|---|---|
+| 100 uF | 0.44 | 2.0 | 1.5 m/s | 0.05% | 96% |
+| 330 uF | 0.81 | 6.6 | 4.4 m/s | 0.14% | 100% |
+| 1 mF | 1.41 | 20 | 15.4 m/s | 0.57% | 99% |
+| **2 mF** | **1.99** | **40** | **25.4 m/s** | **0.78%** | **86%** |
+| 6 mF | 3.44 | 120 | 32.2 m/s | 0.42% | 45% |
+
+Efficiency peaks near critical damping at ~2 mF, which gets **79% of the velocity for 33%
+of the stored energy**. The 6 mF bank buys more absolute velocity but at nearly double
+the energy cost per joule delivered. Worth a finer sweep once Phase 5 lands.
+
+Stage 0 exceeds the 60 C winding limit at 6 mF.
 
 ## Open questions
 
