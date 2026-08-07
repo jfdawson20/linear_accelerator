@@ -32,18 +32,48 @@ class CapacitorBank:
 
 @dataclass(frozen=True)
 class SwitchSpec:
-    """Solid-state switch plus freewheel path.
+    """Switching topology and its losses.
 
     `diode_vf` and the latencies are what make coil turn-off a physical event
     rather than an instantaneous one. v1 modelled turn-off by resetting the
     coil's clock to zero, which forced current to zero in a single timestep.
+
+    Two topologies:
+
+    "diode" -- a series switch with a freewheel diode across the coil. On
+        turn-off the coil sees only -diode_vf, so the current decays on L/R and
+        the stored field energy is dissipated in the winding.
+
+    "ahb" -- an asymmetric half bridge: a switch above and below the coil, both
+        gated together, with diodes returning current to the bank. On turn-off
+        the coil sees -(V_cap + 2*diode_vf), which is two orders of magnitude
+        more reverse volts, and the field energy is recovered into the
+        capacitor rather than burnt. The cost is two device drops in the
+        conduction path instead of one, plus isolated high-side gate drive.
     """
 
     on_resistance: float = 0.00014  # ohm
-    diode_vf: float = 1.5  # V, freewheel diode forward drop
+    diode_vf: float = 1.5  # V, diode forward drop
     turn_on_latency: float = 0.0  # s, gate command -> conduction
     turn_off_latency: float = 0.0  # s
-    off_current_threshold: float = 0.5  # A, below this the freewheel path opens
+    off_current_threshold: float = 0.5  # A, below this the return path opens
+    topology: str = "diode"  # "diode" | "ahb"
+    device_drop: float = 0.0  # V, per-device saturation drop in conduction
+
+    def __post_init__(self) -> None:
+        if self.topology not in ("diode", "ahb"):
+            raise ValueError(
+                f"unknown topology {self.topology!r}; use 'diode' or 'ahb'"
+            )
+
+    @property
+    def conduction_devices(self) -> int:
+        """Devices in series with the coil while conducting."""
+        return 2 if self.topology == "ahb" else 1
+
+    @property
+    def recovers_energy(self) -> bool:
+        return self.topology == "ahb"
 
 
 @dataclass(frozen=True)

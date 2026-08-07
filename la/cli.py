@@ -106,7 +106,13 @@ def build_parser() -> argparse.ArgumentParser:
     elec.add_argument("-V", "--volts", type=float, default=200.0,
                       help="initial capacitor voltage (default 200)")
     elec.add_argument("--diode-vf", type=float, default=1.5,
-                      help="freewheel diode forward drop, V (default 1.5)")
+                      help="diode forward drop, V (default 1.5)")
+    elec.add_argument("--topology", default="diode", choices=("diode", "ahb"),
+                      help="diode: series switch + freewheel diode. "
+                           "ahb: asymmetric half bridge, clamps the coil across "
+                           "the bank in reverse and recovers the field energy")
+    elec.add_argument("--device-drop", type=float, default=0.0,
+                      help="per-device saturation drop in conduction, V")
 
     ctrl = p.add_argument_group("control")
     ctrl.add_argument("--no-prefire", action="store_true",
@@ -159,6 +165,8 @@ def config_from_args(args: argparse.Namespace) -> SimConfig:
         diode_vf=args.diode_vf,
         turn_on_latency=args.switch_latency,
         turn_off_latency=args.switch_latency,
+        topology=args.topology,
+        device_drop=args.device_drop,
     )
     stages = uniform_stages(
         coil=coil,
@@ -239,6 +247,9 @@ def run_sweep(args: argparse.Namespace) -> int:
         max_temp=args.max_temp,
         sensor_latency=args.sensor_latency,
         switch_latency=args.switch_latency,
+        topology=args.topology,
+        device_drop=args.device_drop,
+        diode_vf=args.diode_vf,
     )
     fixed = {k: v for k, v in fixed.items() if k not in axes}
 

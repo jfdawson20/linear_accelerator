@@ -58,6 +58,8 @@ DEFAULTS: dict[str, Any] = {
     "capacitance": 0.006,
     "voltage": 200.0,
     "diode_vf": 1.5,
+    "topology": "diode",      # "diode" | "ahb" (asymmetric half bridge)
+    "device_drop": 0.0,       # V per conducting device
     "prefire": True,
     "sensor_latency": 0.0,
     "switch_latency": 0.0,
@@ -99,6 +101,8 @@ def build_config(**overrides: Any) -> SimConfig:
         diode_vf=p["diode_vf"],
         turn_on_latency=p["switch_latency"],
         turn_off_latency=p["switch_latency"],
+        topology=p["topology"],
+        device_drop=p["device_drop"],
     )
     stages = uniform_stages(
         coil=coil,

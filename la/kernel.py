@@ -65,6 +65,11 @@ class StageKernel:
         self.cap = f(lambda c: c.config.bank.capacitance)
         self.diode_vf = f(lambda c: c.config.switch.diode_vf)
         self.thermal_mass = f(lambda c: c.thermal_mass)
+        # Topology: number of devices in the conduction path, their drop, and
+        # whether turn-off returns the field energy to the bank.
+        self.n_dev = f(lambda c: c.config.switch.conduction_devices)
+        self.device_drop = f(lambda c: c.config.switch.device_drop)
+        self.regen = f(lambda c: float(c.config.switch.recovers_energy))
 
         # Ramp offsets, precomputed: fill is a difference of four ramps at
         # u, u-Lp, u-Lc, u-Lp-Lc.
@@ -129,20 +134,43 @@ class StageKernel:
         l_inc, dlam, force = self.magnetics(fill, dfill, i)
 
         on = switch == ON
-        fw = switch == FREEWHEEL
-        active = switch != OFF
+        # The return path is diodes, which block reverse current. Without this
+        # the current can be driven straight through zero -- the half bridge
+        # puts hundreds of volts across the coil, so di/dt is steep enough to
+        # overshoot within one step, and sign(i) then flips mid-substep and
+        # pumps energy the wrong way.
+        fw = (switch == FREEWHEEL) & (i > 0.0)
+        active = on | fw
+
+        sign_i = np.sign(i)
+        abs_i = np.abs(i)
+        regen = fw & (self.regen > 0.0)
+        plain_fw = fw & (self.regen == 0.0)
 
         r_coil = self.r20 * (1.0 + ALPHA_CU * (temp - T_REF_C))
         r_total = r_coil + np.where(on, self.r_switch, 0.0)
-        drive = np.where(on, vc, 0.0) - np.where(fw, self.diode_vf * np.sign(i), 0.0)
+
+        # ON: bank drives the coil, less the device drops.
+        # Regenerative turn-off: coil clamped across the bank in reverse.
+        # Plain freewheel: coil sees only the diode drop.
+        drive = (
+            np.where(on, vc - self.n_dev * self.device_drop * sign_i, 0.0)
+            - np.where(regen, (np.abs(vc) + 2.0 * self.diode_vf) * sign_i, 0.0)
+            - np.where(plain_fw, self.diode_vf * sign_i, 0.0)
+        )
 
         di = np.where(active, (drive - i * r_total - dlam * v) / l_inc, 0.0)
-        dvc = np.where(on, -i / self.cap, 0.0)
+        # Regeneration charges the bank back up rather than leaving it flat.
+        dvc = np.where(on, -i / self.cap, 0.0) + np.where(regen, abs_i / self.cap, 0.0)
         dtemp = np.where(active, i * i * r_coil / self.thermal_mass, 0.0)
 
         external = float(
-            (np.where(on, i * i * self.r_switch, 0.0)
-             + np.where(fw, np.abs(i) * self.diode_vf, 0.0)).sum()
+            (
+                np.where(on, i * i * self.r_switch + abs_i * self.n_dev
+                         * self.device_drop, 0.0)
+                + np.where(regen, abs_i * 2.0 * self.diode_vf, 0.0)
+                + np.where(plain_fw, abs_i * self.diode_vf, 0.0)
+            ).sum()
         )
         return di, dvc, dtemp, float(force.sum()), external
 

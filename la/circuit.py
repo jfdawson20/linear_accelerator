@@ -93,16 +93,38 @@ class StageCircuit:
         l_inc = float(self.magnetics.l_incremental(x, i))
         back_emf = float(self.magnetics.dlambda_dx(x, i)) * v
 
+        sw = self.config.switch
+        n_dev = sw.conduction_devices
+
+        if switch is not SwitchState.ON and i <= 0.0:
+            # The return path is diodes, which block reverse current. Without
+            # this the current can be driven straight through zero -- the half
+            # bridge puts hundreds of volts across the coil, so di/dt is steep
+            # enough to overshoot within one step, and sign(i) then flips
+            # mid-substep and pumps energy the wrong way.
+            return 0.0, 0.0, 0.0, 0.0
+
         if switch is SwitchState.ON:
-            r_total = r_coil + self.config.switch.on_resistance
-            drive = vc
+            r_total = r_coil + sw.on_resistance
+            drop = n_dev * sw.device_drop * np.sign(i)
+            drive = vc - drop
             dvc_dt = -i / self.config.bank.capacitance
-            external_power = i * i * self.config.switch.on_resistance
-        else:  # FREEWHEEL: coil drives its own current through the diode
+            external_power = i * i * sw.on_resistance + abs(i) * n_dev * sw.device_drop
+        elif sw.recovers_energy:
+            # Asymmetric half bridge, both devices off: the coil is clamped
+            # across the bank in reverse through two diodes, and its current
+            # charges the capacitor back up.
             r_total = r_coil
-            drive = -self.config.switch.diode_vf * np.sign(i)
+            drive = -(abs(vc) + 2.0 * sw.diode_vf) * np.sign(i)
+            dvc_dt = abs(i) / self.config.bank.capacitance
+            external_power = abs(i) * 2.0 * sw.diode_vf
+        else:
+            # Series switch with a freewheel diode: the coil sees only the
+            # diode drop, so the field decays on L/R and its energy is burnt.
+            r_total = r_coil
+            drive = -sw.diode_vf * np.sign(i)
             dvc_dt = 0.0
-            external_power = abs(i) * self.config.switch.diode_vf
+            external_power = abs(i) * sw.diode_vf
 
         di_dt = (drive - i * r_total - back_emf) / l_inc
         dT_dt = (i * i * r_coil) / self.thermal_mass
