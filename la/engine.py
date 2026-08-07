@@ -28,9 +28,31 @@ import numpy as np
 from .circuit import StageCircuit, SwitchState
 from .config import SimConfig
 from .control import StageController, build_controllers
+from .kernel import FREEWHEEL, OFF, ON, StageKernel
 
 _STATE_BASE = 3
 _PER_STAGE = 3
+
+_SWITCH_CODE = {
+    SwitchState.OFF: OFF,
+    SwitchState.ON: ON,
+    SwitchState.FREEWHEEL: FREEWHEEL,
+}
+
+
+@dataclass
+class RunSummary:
+    """Scalar outcomes, maintained during the run so that `record=False` still
+    yields everything a parameter sweep needs without keeping the trace."""
+
+    exit_velocity: float
+    peak_current: np.ndarray
+    peak_temperature: np.ndarray
+    forward_impulse: np.ndarray
+    suck_back_impulse: np.ndarray
+    conduction_time: np.ndarray
+    steps: int
+    duration: float
 
 
 @dataclass
@@ -90,37 +112,39 @@ class RunResult:
     energy: EnergyAudit
     controllers: list[StageController]
     terminated: str
+    summary: RunSummary
     warnings: list[str] = field(default_factory=list)
 
     @property
+    def recorded(self) -> bool:
+        return self.config.record
+
+    @property
     def exit_velocity(self) -> float:
-        return float(self.velocity[-1])
+        return self.summary.exit_velocity
 
     @property
     def peak_current(self) -> np.ndarray:
-        return np.abs(self.current).max(axis=0)
+        return self.summary.peak_current
 
     @property
     def peak_temperature(self) -> np.ndarray:
-        return self.temperature.max(axis=0)
+        return self.summary.peak_temperature
 
     def stage_conduction_time(self) -> np.ndarray:
         """Time each stage spent with current flowing (ON or FREEWHEEL)."""
-        dt = self.config.dt
-        return (self.switch_state != 0).sum(axis=0) * dt
+        return self.summary.conduction_time
 
     def suck_back_impulse(self) -> np.ndarray:
         """Negative (retarding) impulse per stage, in N.s.
 
         The number the 2:1 design premise exists to keep small. Non-zero values
-        mean the field had not collapsed before the projectile crossed centre.
+        mean current was still flowing when the force reversed.
         """
-        dt = self.config.dt
-        return np.where(self.force < 0, self.force, 0.0).sum(axis=0) * dt
+        return self.summary.suck_back_impulse
 
     def forward_impulse(self) -> np.ndarray:
-        dt = self.config.dt
-        return np.where(self.force > 0, self.force, 0.0).sum(axis=0) * dt
+        return self.summary.forward_impulse
 
 
 class Simulation:
@@ -144,6 +168,11 @@ class Simulation:
             lead_times=[c.time_to_peak_current() for c in self.circuits],
         )
         self.n = len(self.circuits)
+        self.kernel = StageKernel(
+            self.circuits,
+            saturation=config.saturation,
+            projectile_length=config.projectile.length,
+        )
 
     # -- validation -----------------------------------------------------
 
@@ -173,33 +202,36 @@ class Simulation:
 
     # -- integration ----------------------------------------------------
 
-    def _derivatives(self, y: np.ndarray, switches: list[SwitchState]) -> np.ndarray:
+    def _derivatives(self, y: np.ndarray, switch_codes: np.ndarray) -> np.ndarray:
+        """Fused, vectorised derivative evaluation across all stages.
+
+        `circuit.StageCircuit.derivatives` is the readable reference for the
+        same equations; tests/test_kernel.py asserts the two agree.
+        """
         x, v = y[0], y[1]
-        dy = np.zeros_like(y)
+        dy = np.empty_like(y)
         dy[0] = v
 
-        total_force = 0.0
-        external_power = 0.0
-        for k, circ in enumerate(self.circuits):
-            b = _STATE_BASE + _PER_STAGE * k
-            i, vc, temp = y[b], y[b + 1], y[b + 2]
-            di, dvc, dtemp, p_ext = circ.derivatives(
-                i, vc, temp, x, v, switches[k]
-            )
-            dy[b], dy[b + 1], dy[b + 2] = di, dvc, dtemp
-            external_power += p_ext
-            # Every stage pushes or pulls, wherever the projectile is.
-            total_force += float(circ.magnetics.force(x, i))
+        i = y[_STATE_BASE + 0 :: _PER_STAGE]
+        vc = y[_STATE_BASE + 1 :: _PER_STAGE]
+        temp = y[_STATE_BASE + 2 :: _PER_STAGE]
 
-        dy[1] = total_force / self.mass
-        dy[2] = external_power
+        di, dvc, dtemp, force, external = self.kernel.derivatives(
+            x, v, i, vc, temp, switch_codes
+        )
+
+        dy[1] = force / self.mass
+        dy[2] = external
+        dy[_STATE_BASE + 0 :: _PER_STAGE] = di
+        dy[_STATE_BASE + 1 :: _PER_STAGE] = dvc
+        dy[_STATE_BASE + 2 :: _PER_STAGE] = dtemp
         return dy
 
-    def _rk4(self, y: np.ndarray, switches: list[SwitchState], dt: float):
-        k1 = self._derivatives(y, switches)
-        k2 = self._derivatives(y + 0.5 * dt * k1, switches)
-        k3 = self._derivatives(y + 0.5 * dt * k2, switches)
-        k4 = self._derivatives(y + dt * k3, switches)
+    def _rk4(self, y: np.ndarray, switch_codes: np.ndarray, dt: float):
+        k1 = self._derivatives(y, switch_codes)
+        k2 = self._derivatives(y + 0.5 * dt * k1, switch_codes)
+        k3 = self._derivatives(y + 0.5 * dt * k2, switch_codes)
+        k4 = self._derivatives(y + dt * k3, switch_codes)
         return y + (dt / 6.0) * (k1 + 2 * k2 + 2 * k3 + k4)
 
     def run(self, max_time: float = 0.5) -> RunResult:
@@ -215,10 +247,12 @@ class Simulation:
             y[b + 2] = cfg.thermal.ambient_c
 
         switches = [SwitchState.OFF] * self.n
+        switch_codes = np.zeros(self.n, dtype=np.int64)
         conducted = [False] * self.n
         discarded = 0.0
 
-        # Recording buffers.
+        # Recording buffers. With record=False only the running summary is
+        # kept, which is what makes parameter sweeps affordable.
         cap = max_steps if cfg.record else 1
         t_a = np.zeros(cap)
         x_a = np.zeros(cap)
@@ -238,32 +272,45 @@ class Simulation:
         terminated = "max_time"
         step = 0
 
+        # Running summary, maintained whether or not the trace is recorded.
+        peak_i = np.zeros(self.n)
+        peak_t = np.full(self.n, cfg.thermal.ambient_c)
+        fwd_impulse = np.zeros(self.n)
+        back_impulse = np.zeros(self.n)
+        conduction = np.zeros(self.n)
+
         for step in range(max_steps):
             t = step * dt
             x, v = y[0], y[1]
+            i_vec = y[_STATE_BASE + 0 :: _PER_STAGE]
+
+            force_vec = self.kernel.force_only(x, i_vec)
+            np.maximum(peak_i, np.abs(i_vec), out=peak_i)
+            np.maximum(peak_t, y[_STATE_BASE + 2 :: _PER_STAGE], out=peak_t)
+            fwd_impulse += np.where(force_vec > 0, force_vec, 0.0) * dt
+            back_impulse += np.where(force_vec < 0, force_vec, 0.0) * dt
+            conduction += (switch_codes != 0) * dt
 
             if cfg.record:
                 t_a[step] = t
                 x_a[step] = x
                 v_a[step] = v
-                for k, circ in enumerate(self.circuits):
-                    b = _STATE_BASE + _PER_STAGE * k
-                    i = y[b]
-                    i_a[step, k] = i
-                    vc_a[step, k] = y[b + 1]
-                    tp_a[step, k] = y[b + 2]
-                    f_a[step, k] = float(circ.magnetics.force(x, i))
-                    l_a[step, k] = float(circ.magnetics.l_incremental(x, i))
-                    sw_a[step, k] = 0 if switches[k] is SwitchState.OFF else 1
+                i_a[step] = i_vec
+                vc_a[step] = y[_STATE_BASE + 1 :: _PER_STAGE]
+                tp_a[step] = y[_STATE_BASE + 2 :: _PER_STAGE]
+                f_a[step] = force_vec
+                l_a[step] = self.kernel.inductance_only(x, i_vec)
+                sw_a[step] = switch_codes
 
             if x >= finish_x:
                 terminated = "cleared_barrel"
                 break
 
-            y = self._rk4(y, switches, dt)
+            y = self._rk4(y, switch_codes, dt)
             t_next = t + dt
 
-            # Discrete updates at the step boundary.
+            # Discrete updates at the step boundary. Only once per step, so
+            # this stays on the readable per-stage path.
             quiescent = True
             for k, circ in enumerate(self.circuits):
                 b = _STATE_BASE + _PER_STAGE * k
@@ -278,6 +325,7 @@ class Simulation:
                     discarded += circ.stored_magnetic_energy(y[0], y[b])
                     y[b] = 0.0
                 switches[k] = nxt
+                switch_codes[k] = _SWITCH_CODE[nxt]
                 if abs(y[b]) > threshold:
                     quiescent = False
 
@@ -297,6 +345,16 @@ class Simulation:
 
         used = step + 1
         energy = self._audit(y, discarded)
+        summary = RunSummary(
+            exit_velocity=float(y[1]),
+            peak_current=peak_i,
+            peak_temperature=peak_t,
+            forward_impulse=fwd_impulse,
+            suck_back_impulse=back_impulse,
+            conduction_time=conduction,
+            steps=used,
+            duration=used * dt,
+        )
 
         return RunResult(
             config=cfg,
@@ -313,25 +371,22 @@ class Simulation:
             controllers=self.controllers,
             terminated=terminated,
             warnings=warnings,
+            summary=summary,
         )
 
     def _audit(self, y: np.ndarray, discarded: float) -> EnergyAudit:
         cfg = self.config
-        cap_energy = 0.0
-        magnetic = 0.0
-        winding = 0.0
-        for k, circ in enumerate(self.circuits):
-            b = _STATE_BASE + _PER_STAGE * k
-            i, vc, temp = y[b], y[b + 1], y[b + 2]
-            cap_energy += 0.5 * circ.config.bank.capacitance * vc * vc
-            magnetic += circ.stored_magnetic_energy(y[0], i)
-            winding += circ.thermal_mass * (temp - cfg.thermal.ambient_c)
+        i = y[_STATE_BASE + 0 :: _PER_STAGE]
+        vc = y[_STATE_BASE + 1 :: _PER_STAGE]
+        temp = y[_STATE_BASE + 2 :: _PER_STAGE]
         return EnergyAudit(
             initial=cfg.total_stored_energy,
-            capacitor=cap_energy,
-            magnetic=magnetic,
+            capacitor=float((0.5 * self.kernel.cap * vc * vc).sum()),
+            magnetic=float(self.kernel.stored_magnetic_energy(y[0], i).sum()),
             kinetic=0.5 * self.mass * y[1] * y[1],
-            winding_heat=winding,
+            winding_heat=float(
+                (self.kernel.thermal_mass * (temp - cfg.thermal.ambient_c)).sum()
+            ),
             external_loss=y[2],
             discarded=discarded,
         )

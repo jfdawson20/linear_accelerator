@@ -41,10 +41,32 @@ def build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "command",
-        choices=("run", "design", "profile"),
+        choices=("run", "design", "profile", "sweep"),
         help="run: simulate. design: static parameters only. "
-        "profile: force vs position for one stage.",
+        "profile: force vs position for one stage. "
+        "sweep: grid search over parameters.",
     )
+
+    sw = p.add_argument_group("sweep")
+    sw.add_argument(
+        "--vary",
+        action="append",
+        default=[],
+        metavar="NAME=V1,V2,...",
+        help="axis to sweep; repeatable. e.g. --vary turns=100,150,200",
+    )
+    sw.add_argument("--objective", default="velocity",
+                    choices=("velocity", "efficiency", "velocity_per_joule",
+                             "muzzle_energy"),
+                    help="what to rank by (default velocity)")
+    sw.add_argument("--allow-overheat", action="store_true",
+                    help="include configurations above the winding limit")
+    sw.add_argument("--max-suck-back", type=float, default=None,
+                    metavar="PCT", help="reject points above this suck-back %%")
+    sw.add_argument("--workers", type=int, default=None,
+                    help="parallel workers (default: all cores)")
+    sw.add_argument("--top", type=int, default=20,
+                    help="rows to show (default 20)")
 
     coil = p.add_argument_group("coil")
     coil.add_argument("-l", "--length", type=float, default=0.035,
@@ -155,8 +177,112 @@ def config_from_args(args: argparse.Namespace) -> SimConfig:
     )
 
 
+def _parse_axis(spec: str) -> tuple[str, list]:
+    """Turn 'turns=100,150,200' into ('turns', [100, 150, 200]).
+
+    Values are typed from the default they override, so ints stay ints.
+    """
+    from .sweep import DEFAULTS
+
+    if "=" not in spec:
+        raise ValueError(f"--vary needs NAME=V1,V2,...; got {spec!r}")
+    name, raw = spec.split("=", 1)
+    name = name.strip()
+    if name not in DEFAULTS:
+        raise ValueError(
+            f"unknown sweep parameter {name!r}; known: {sorted(DEFAULTS)}"
+        )
+    default = DEFAULTS[name]
+    values = []
+    for token in raw.split(","):
+        token = token.strip()
+        if isinstance(default, bool):
+            values.append(token.lower() in ("1", "true", "yes", "on"))
+        elif isinstance(default, int) and not isinstance(default, bool):
+            values.append(int(token))
+        elif isinstance(default, str):
+            values.append(token)
+        else:
+            values.append(float(token))
+    return name, values
+
+
+def run_sweep(args: argparse.Namespace) -> int:
+    from .sweep import ParameterSpace, rank, results_table, sensitivity, sweep
+
+    if not args.vary:
+        print("error: sweep needs at least one --vary NAME=V1,V2,...",
+              file=sys.stderr)
+        return 2
+    try:
+        axes = dict(_parse_axis(spec) for spec in args.vary)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
+
+    space = ParameterSpace(**axes)
+    fixed = dict(
+        stages=args.stages,
+        dt=args.dt,
+        coil_length=args.length,
+        bore=args.bore,
+        proj_dia=args.proj_dia,
+        density=args.density,
+        mu_r=args.mu_r,
+        b_sat=args.b_sat,
+        spacing=args.spacing,
+        prefire=not args.no_prefire,
+        saturation=not args.no_saturation,
+        ambient=args.ambient,
+        max_temp=args.max_temp,
+        sensor_latency=args.sensor_latency,
+        switch_latency=args.switch_latency,
+    )
+    fixed = {k: v for k, v in fixed.items() if k not in axes}
+
+    print(f"sweeping {len(space)} configurations over {sorted(axes)}")
+    results = sweep(space, fixed=fixed, workers=args.workers)
+
+    ranked = rank(
+        results,
+        objective=args.objective,
+        thermal_limit=not args.allow_overheat,
+        max_suck_back_pct=args.max_suck_back,
+    )
+    failed = [r for r in results if not r.ok]
+    rejected = len(results) - len(ranked) - len(failed)
+
+    print(f"\nTOP {min(args.top, len(ranked))} BY {args.objective.upper()}")
+    print(results_table(ranked, list(axes), limit=args.top))
+    print(
+        f"\n  {len(ranked)} viable, {rejected} rejected by constraints, "
+        f"{len(failed)} failed to build"
+    )
+    if failed:
+        print(f"  first failure: {failed[0].error}")
+
+    for axis in axes:
+        rows = sensitivity(results, axis, args.objective)
+        span = max(r[1] for r in rows) - min(r[1] for r in rows)
+        print(f"\n  {axis}: best-per-value spans {span:.3g} "
+              f"({args.objective})")
+        for value, best, mean in rows:
+            print(f"    {str(value):>10}  best {best:9.4g}   mean {mean:9.4g}")
+
+    if ranked:
+        best = ranked[0].params
+        flags = " ".join(f"--{k.replace('_','-')} {v}" for k, v in best.items()
+                         if k in axes)
+        print(f"\n  best point: {flags}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
+
+    if args.command == "sweep":
+        return run_sweep(args)
+
     try:
         config = config_from_args(args)
     except ValueError as exc:

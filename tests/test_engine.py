@@ -117,11 +117,18 @@ def test_current_decays_rather_than_stopping_instantly():
     assert steps.max() < 0.05 * np.abs(i).max()
 
 
-def test_stage_conducts_then_stops():
+def test_stage_conducts_then_freewheels_then_stops():
+    """The trace records the actual switch state (0 off, 1 on, 2 freewheel), so
+    the whole sequence is visible rather than collapsed into on/off."""
+    from la.kernel import FREEWHEEL, OFF, ON
+
     result = Simulation(make_config(1)).run()
-    states = result.switch_state[:, 0]
-    assert states.max() == 1  # conducted at some point
-    assert states[-1] == 0  # and stopped by the end
+    states = list(result.switch_state[:, 0])
+    assert ON in states
+    assert FREEWHEEL in states
+    assert states[-1] == OFF
+    # and the order is on -> freewheel -> off, never freewheel before on
+    assert states.index(ON) < states.index(FREEWHEEL)
 
 
 def test_gate_turns_off_when_projectile_is_fully_inside():

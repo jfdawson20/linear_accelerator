@@ -316,20 +316,35 @@ No physics changes.
   - [x] energy closure over a full multi-stage run
 - [x] Convergence: halve `dt`, exit velocity moves < 0.5%
 
-### Phase 5 — Optimiser (remaining)
+### Phase 5 — Optimiser
 
-Note: Phase 3 was absorbed entirely into Phases 1-2. The full-suite runtime (~50 s)
-is dominated by the Python-level integrator loop, which is what item 1 addresses.
+Phase 3 was absorbed entirely into Phases 1-2.
 
-- [ ] Performance: numpy arrays / flat records, not one dict per stage per timestep;
-      `record=False` summary-only mode
-- [ ] Rewrite `Optimize` (currently crashes: missing `self.`, list indexed by string)
-- [ ] Sweeps over turns, gauge, coil length, **coil/projectile length ratio**, stage
-      spacing, prefire lead, cap voltage
-- [ ] Fix the `main` block building 10 identical profiles (`turns` hardcoded to 150 with
-      the variation commented out)
+- [x] Performance. Profiling the scalar path showed 1.5M scalar sigmoid calls and
+      3.2M np.asarray calls per 8-stage run: numpy per-call overhead dominated
+      completely. `la/kernel.py` evaluates all stages as one array operation and
+      shares the four ramp terms between fill, dfill/dx, inductance, back-EMF and
+      force rather than recomputing dfill/dx twice per derivative evaluation.
+      `record=False` drops the per-step trace and keeps a running summary.
+- [x] Rewrite `Optimize` as `la/sweep.py`. Every grid point builds its config from
+      scratch, so there is no shared mutable state -- the failure mode that made
+      v1's optimiser unusable.
+- [x] Sweeps over turns, gauge, coil length, coil/projectile ratio, stage spacing,
+      capacitance, voltage, prefire and latencies, with constraints (thermal
+      limit, suck-back ceiling) and per-axis sensitivity.
+- [x] `la sweep --vary NAME=V1,V2,...` CLI, parallel across cores.
 
----
+### Cost of a run
+
+| | before | after |
+|---|---|---|
+| 8 stages, dt=2us, recorded | 11.2 s | 5.5 s |
+| 8 stages, dt=2us, record=False | - | 3.7 s |
+| 8 stages, dt=10us, record=False | - | 0.80 s |
+| sweep point, wall, 8 cores | - | 0.16 s |
+
+Timestep convergence against dt=1us: 2us costs 0.02%, 5us costs 0.08%, 10us costs
+0.19%, 20us costs 0.43%. Sweeps default to 10us; `check_timestep()` still warns.
 
 ---
 
