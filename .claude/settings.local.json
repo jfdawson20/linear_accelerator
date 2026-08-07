@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 300 python3 sim.py -o exec -s 2)",
+      "Bash(python3 -)",
+      "Bash(.venv/bin/python -)",
+      "Bash(.venv/bin/python -m pytest -q)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}
