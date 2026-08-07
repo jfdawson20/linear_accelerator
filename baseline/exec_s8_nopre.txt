@@ -1,0 +1,287 @@
+### CMD: sim.py -o exec -s 8 -p DISABLE
+here
+here
+here
+here
+here
+here
+here
+here
+here
+here
+5.635692189665741e-05
+
+
++---------------------------------+------------------------+----------------------------------------+
+|            Parameter            |         Value          |              Description               |
++---------------------------------+------------------------+----------------------------------------+
+|             Coil ID             |           0            |            Coil Identifier             |
+|       Air Core Inductance       | 5.635692189665741e-05  |     Coil Inductance (air-core) (H)     |
+|           Coil Length           |         0.035          |            Coil Length (m)             |
+|       Coil Inner Diameter       |         0.0098         |       Barrel outer Diameter (m)        |
+|       Projectile Diameter       |         0.006          |        Projectile Diameter (m)         |
+|       Coil Outer Diameter       |       0.01060772       |  Mean diameter of multilayer coil (m)  |
+|        Coil Inner Radius        |         0.0049         |        inner radius of coil (m)        |
+|        Coil Outer Radius        | 0.0057077199999999995  |        outer radius of coil (m)        |
+|    Coil Cross-sectional Area    | 7.542963961269094e-05  | Coil Cross-sectional Area (Barrel) (m) |
+|           Coil Air Gap          | 0.0037999999999999996  |              Coil Air Gap              |
+|            Coil turns           |          150           |      Number of Wire Turns in Coil      |
+|         Coil wire length        |   4.811330550744266    |       Length of wire in coil (m)       |
+|         Coil wire gauge         |         26AWG          |               wire gauge               |
+|        Coil wire diameter       | 0.00040385999999999997 |           wire diameter (m)            |
+|          Coil wire area         | 1.281007177906384e-07  |            wire area (m^2)             |
+|      Coil Series Resistance     |   0.6460142214663617   |    Series Resistance of Coil (Ohm)     |
+|       Coil x-axis location      |          0.0           |     start of coil location in sim      |
+|   Vaccum Permeability Constant  | 1.2566370614359173e-06 |                  H/m                   |
+| Maximum Turns in a single layer |           86           |                 Turns                  |
+|      Number of coil layers      |           2            |                 layers                 |
+|     Ambient Coil Temperature    |           25           |                   C                    |
+|       Max Coil Temperature      |           60           |                   C                    |
+|         Max Coil Current        |          450           |                   A                    |
+|           Max On Time           | 0.0005160099103602579  |                   s                    |
++---------------------------------+------------------------+----------------------------------------+
+
+
+5.635692189665741e-05
+
+
++---------------------------------+------------------------+----------------------------------------+
+|            Parameter            |         Value          |              Description               |
++---------------------------------+------------------------+----------------------------------------+
+|             Coil ID             |           1            |            Coil Identifier             |
+|       Air Core Inductance       | 5.635692189665741e-05  |     Coil Inductance (air-core) (H)     |
+|           Coil Length           |         0.035          |            Coil Length (m)             |
+|       Coil Inner Diameter       |         0.0098         |       Barrel outer Diameter (m)        |
+|       Projectile Diameter       |         0.006          |        Projectile Diameter (m)         |
+|       Coil Outer Diameter       |       0.01060772       |  Mean diameter of multilayer coil (m)  |
+|        Coil Inner Radius        |         0.0049         |        inner radius of coil (m)        |
+|        Coil Outer Radius        | 0.0057077199999999995  |        outer radius of coil (m)        |
+|    Coil Cross-sectional Area    | 7.542963961269094e-05  | Coil Cross-sectional Area (Barrel) (m) |
+|           Coil Air Gap          | 0.0037999999999999996  |              Coil Air Gap              |
+|            Coil turns           |          150           |      Number of Wire Turns in Coil      |
+|         Coil wire length        |   4.811330550744266    |       Length of wire in coil (m)       |
+|         Coil wire gauge         |         26AWG          |               wire gauge               |
+|        Coil wire diameter       | 0.00040385999999999997 |           wire diameter (m)            |
+|          Coil wire area         | 1.281007177906384e-07  |            wire area (m^2)             |
+|      Coil Series Resistance     |   0.6460142214663617   |    Series Resistance of Coil (Ohm)     |
+|       Coil x-axis location      |         0.0538         |     start of coil location in sim      |
+|   Vaccum Permeability Constant  | 1.2566370614359173e-06 |                  H/m                   |
+| Maximum Turns in a single layer |           86           |                 Turns                  |
+|      Number of coil layers      |           2            |                 layers                 |
+|     Ambient Coil Temperature    |           25           |                   C                    |
+|       Max Coil Temperature      |           60           |                   C                    |
+|         Max Coil Current        |          450           |                   A                    |
+|           Max On Time           | 0.0005160099103602579  |                   s                    |
++---------------------------------+------------------------+----------------------------------------+
+
+
+5.635692189665741e-05
+
+
++---------------------------------+------------------------+----------------------------------------+
+|            Parameter            |         Value          |              Description               |
++---------------------------------+------------------------+----------------------------------------+
+|             Coil ID             |           2            |            Coil Identifier             |
+|       Air Core Inductance       | 5.635692189665741e-05  |     Coil Inductance (air-core) (H)     |
+|           Coil Length           |         0.035          |            Coil Length (m)             |
+|       Coil Inner Diameter       |         0.0098         |       Barrel outer Diameter (m)        |
+|       Projectile Diameter       |         0.006          |        Projectile Diameter (m)         |
+|       Coil Outer Diameter       |       0.01060772       |  Mean diameter of multilayer coil (m)  |
+|        Coil Inner Radius        |         0.0049         |        inner radius of coil (m)        |
+|        Coil Outer Radius        | 0.0057077199999999995  |        outer radius of coil (m)        |
+|    Coil Cross-sectional Area    | 7.542963961269094e-05  | Coil Cross-sectional Area (Barrel) (m) |
+|           Coil Air Gap          | 0.0037999999999999996  |              Coil Air Gap              |
+|            Coil turns           |          150           |      Number of Wire Turns in Coil      |
+|         Coil wire length        |   4.811330550744266    |       Length of wire in coil (m)       |
+|         Coil wire gauge         |         26AWG          |               wire gauge               |
+|        Coil wire diameter       | 0.00040385999999999997 |           wire diameter (m)            |
+|          Coil wire area         | 1.281007177906384e-07  |            wire area (m^2)             |
+|      Coil Series Resistance     |   0.6460142214663617   |    Series Resistance of Coil (Ohm)     |
+|       Coil x-axis location      |         0.1076         |     start of coil location in sim      |
+|   Vaccum Permeability Constant  | 1.2566370614359173e-06 |                  H/m                   |
+| Maximum Turns in a single layer |           86           |                 Turns                  |
+|      Number of coil layers      |           2            |                 layers                 |
+|     Ambient Coil Temperature    |           25           |                   C                    |
+|       Max Coil Temperature      |           60           |                   C                    |
+|         Max Coil Current        |          450           |                   A                    |
+|           Max On Time           | 0.0005160099103602579  |                   s                    |
++---------------------------------+------------------------+----------------------------------------+
+
+
+5.635692189665741e-05
+
+
++---------------------------------+------------------------+----------------------------------------+
+|            Parameter            |         Value          |              Description               |
++---------------------------------+------------------------+----------------------------------------+
+|             Coil ID             |           3            |            Coil Identifier             |
+|       Air Core Inductance       | 5.635692189665741e-05  |     Coil Inductance (air-core) (H)     |
+|           Coil Length           |         0.035          |            Coil Length (m)             |
+|       Coil Inner Diameter       |         0.0098         |       Barrel outer Diameter (m)        |
+|       Projectile Diameter       |         0.006          |        Projectile Diameter (m)         |
+|       Coil Outer Diameter       |       0.01060772       |  Mean diameter of multilayer coil (m)  |
+|        Coil Inner Radius        |         0.0049         |        inner radius of coil (m)        |
+|        Coil Outer Radius        | 0.0057077199999999995  |        outer radius of coil (m)        |
+|    Coil Cross-sectional Area    | 7.542963961269094e-05  | Coil Cross-sectional Area (Barrel) (m) |
+|           Coil Air Gap          | 0.0037999999999999996  |              Coil Air Gap              |
+|            Coil turns           |          150           |      Number of Wire Turns in Coil      |
+|         Coil wire length        |   4.811330550744266    |       Length of wire in coil (m)       |
+|         Coil wire gauge         |         26AWG          |               wire gauge               |
+|        Coil wire diameter       | 0.00040385999999999997 |           wire diameter (m)            |
+|          Coil wire area         | 1.281007177906384e-07  |            wire area (m^2)             |
+|      Coil Series Resistance     |   0.6460142214663617   |    Series Resistance of Coil (Ohm)     |
+|       Coil x-axis location      |         0.1614         |     start of coil location in sim      |
+|   Vaccum Permeability Constant  | 1.2566370614359173e-06 |                  H/m                   |
+| Maximum Turns in a single layer |           86           |                 Turns                  |
+|      Number of coil layers      |           2            |                 layers                 |
+|     Ambient Coil Temperature    |           25           |                   C                    |
+|       Max Coil Temperature      |           60           |                   C                    |
+|         Max Coil Current        |          450           |                   A                    |
+|           Max On Time           | 0.0005160099103602579  |                   s                    |
++---------------------------------+------------------------+----------------------------------------+
+
+
+5.635692189665741e-05
+
+
++---------------------------------+------------------------+----------------------------------------+
+|            Parameter            |         Value          |              Description               |
++---------------------------------+------------------------+----------------------------------------+
+|             Coil ID             |           4            |            Coil Identifier             |
+|       Air Core Inductance       | 5.635692189665741e-05  |     Coil Inductance (air-core) (H)     |
+|           Coil Length           |         0.035          |            Coil Length (m)             |
+|       Coil Inner Diameter       |         0.0098         |       Barrel outer Diameter (m)        |
+|       Projectile Diameter       |         0.006          |        Projectile Diameter (m)         |
+|       Coil Outer Diameter       |       0.01060772       |  Mean diameter of multilayer coil (m)  |
+|        Coil Inner Radius        |         0.0049         |        inner radius of coil (m)        |
+|        Coil Outer Radius        | 0.0057077199999999995  |        outer radius of coil (m)        |
+|    Coil Cross-sectional Area    | 7.542963961269094e-05  | Coil Cross-sectional Area (Barrel) (m) |
+|           Coil Air Gap          | 0.0037999999999999996  |              Coil Air Gap              |
+|            Coil turns           |          150           |      Number of Wire Turns in Coil      |
+|         Coil wire length        |   4.811330550744266    |       Length of wire in coil (m)       |
+|         Coil wire gauge         |         26AWG          |               wire gauge               |
+|        Coil wire diameter       | 0.00040385999999999997 |           wire diameter (m)            |
+|          Coil wire area         | 1.281007177906384e-07  |            wire area (m^2)             |
+|      Coil Series Resistance     |   0.6460142214663617   |    Series Resistance of Coil (Ohm)     |
+|       Coil x-axis location      |         0.2152         |     start of coil location in sim      |
+|   Vaccum Permeability Constant  | 1.2566370614359173e-06 |                  H/m                   |
+| Maximum Turns in a single layer |           86           |                 Turns                  |
+|      Number of coil layers      |           2            |                 layers                 |
+|     Ambient Coil Temperature    |           25           |                   C                    |
+|       Max Coil Temperature      |           60           |                   C                    |
+|         Max Coil Current        |          450           |                   A                    |
+|           Max On Time           | 0.0005160099103602579  |                   s                    |
++---------------------------------+------------------------+----------------------------------------+
+
+
+5.635692189665741e-05
+
+
++---------------------------------+------------------------+----------------------------------------+
+|            Parameter            |         Value          |              Description               |
++---------------------------------+------------------------+----------------------------------------+
+|             Coil ID             |           5            |            Coil Identifier             |
+|       Air Core Inductance       | 5.635692189665741e-05  |     Coil Inductance (air-core) (H)     |
+|           Coil Length           |         0.035          |            Coil Length (m)             |
+|       Coil Inner Diameter       |         0.0098         |       Barrel outer Diameter (m)        |
+|       Projectile Diameter       |         0.006          |        Projectile Diameter (m)         |
+|       Coil Outer Diameter       |       0.01060772       |  Mean diameter of multilayer coil (m)  |
+|        Coil Inner Radius        |         0.0049         |        inner radius of coil (m)        |
+|        Coil Outer Radius        | 0.0057077199999999995  |        outer radius of coil (m)        |
+|    Coil Cross-sectional Area    | 7.542963961269094e-05  | Coil Cross-sectional Area (Barrel) (m) |
+|           Coil Air Gap          | 0.0037999999999999996  |              Coil Air Gap              |
+|            Coil turns           |          150           |      Number of Wire Turns in Coil      |
+|         Coil wire length        |   4.811330550744266    |       Length of wire in coil (m)       |
+|         Coil wire gauge         |         26AWG          |               wire gauge               |
+|        Coil wire diameter       | 0.00040385999999999997 |           wire diameter (m)            |
+|          Coil wire area         | 1.281007177906384e-07  |            wire area (m^2)             |
+|      Coil Series Resistance     |   0.6460142214663617   |    Series Resistance of Coil (Ohm)     |
+|       Coil x-axis location      |         0.269          |     start of coil location in sim      |
+|   Vaccum Permeability Constant  | 1.2566370614359173e-06 |                  H/m                   |
+| Maximum Turns in a single layer |           86           |                 Turns                  |
+|      Number of coil layers      |           2            |                 layers                 |
+|     Ambient Coil Temperature    |           25           |                   C                    |
+|       Max Coil Temperature      |           60           |                   C                    |
+|         Max Coil Current        |          450           |                   A                    |
+|           Max On Time           | 0.0005160099103602579  |                   s                    |
++---------------------------------+------------------------+----------------------------------------+
+
+
+5.635692189665741e-05
+
+
++---------------------------------+------------------------+----------------------------------------+
+|            Parameter            |         Value          |              Description               |
++---------------------------------+------------------------+----------------------------------------+
+|             Coil ID             |           6            |            Coil Identifier             |
+|       Air Core Inductance       | 5.635692189665741e-05  |     Coil Inductance (air-core) (H)     |
+|           Coil Length           |         0.035          |            Coil Length (m)             |
+|       Coil Inner Diameter       |         0.0098         |       Barrel outer Diameter (m)        |
+|       Projectile Diameter       |         0.006          |        Projectile Diameter (m)         |
+|       Coil Outer Diameter       |       0.01060772       |  Mean diameter of multilayer coil (m)  |
+|        Coil Inner Radius        |         0.0049         |        inner radius of coil (m)        |
+|        Coil Outer Radius        | 0.0057077199999999995  |        outer radius of coil (m)        |
+|    Coil Cross-sectional Area    | 7.542963961269094e-05  | Coil Cross-sectional Area (Barrel) (m) |
+|           Coil Air Gap          | 0.0037999999999999996  |              Coil Air Gap              |
+|            Coil turns           |          150           |      Number of Wire Turns in Coil      |
+|         Coil wire length        |   4.811330550744266    |       Length of wire in coil (m)       |
+|         Coil wire gauge         |         26AWG          |               wire gauge               |
+|        Coil wire diameter       | 0.00040385999999999997 |           wire diameter (m)            |
+|          Coil wire area         | 1.281007177906384e-07  |            wire area (m^2)             |
+|      Coil Series Resistance     |   0.6460142214663617   |    Series Resistance of Coil (Ohm)     |
+|       Coil x-axis location      |         0.3228         |     start of coil location in sim      |
+|   Vaccum Permeability Constant  | 1.2566370614359173e-06 |                  H/m                   |
+| Maximum Turns in a single layer |           86           |                 Turns                  |
+|      Number of coil layers      |           2            |                 layers                 |
+|     Ambient Coil Temperature    |           25           |                   C                    |
+|       Max Coil Temperature      |           60           |                   C                    |
+|         Max Coil Current        |          450           |                   A                    |
+|           Max On Time           | 0.0005160099103602579  |                   s                    |
++---------------------------------+------------------------+----------------------------------------+
+
+
+5.635692189665741e-05
+
+
++---------------------------------+------------------------+----------------------------------------+
+|            Parameter            |         Value          |              Description               |
++---------------------------------+------------------------+----------------------------------------+
+|             Coil ID             |           7            |            Coil Identifier             |
+|       Air Core Inductance       | 5.635692189665741e-05  |     Coil Inductance (air-core) (H)     |
+|           Coil Length           |         0.035          |            Coil Length (m)             |
+|       Coil Inner Diameter       |         0.0098         |       Barrel outer Diameter (m)        |
+|       Projectile Diameter       |         0.006          |        Projectile Diameter (m)         |
+|       Coil Outer Diameter       |       0.01060772       |  Mean diameter of multilayer coil (m)  |
+|        Coil Inner Radius        |         0.0049         |        inner radius of coil (m)        |
+|        Coil Outer Radius        | 0.0057077199999999995  |        outer radius of coil (m)        |
+|    Coil Cross-sectional Area    | 7.542963961269094e-05  | Coil Cross-sectional Area (Barrel) (m) |
+|           Coil Air Gap          | 0.0037999999999999996  |              Coil Air Gap              |
+|            Coil turns           |          150           |      Number of Wire Turns in Coil      |
+|         Coil wire length        |   4.811330550744266    |       Length of wire in coil (m)       |
+|         Coil wire gauge         |         26AWG          |               wire gauge               |
+|        Coil wire diameter       | 0.00040385999999999997 |           wire diameter (m)            |
+|          Coil wire area         | 1.281007177906384e-07  |            wire area (m^2)             |
+|      Coil Series Resistance     |   0.6460142214663617   |    Series Resistance of Coil (Ohm)     |
+|       Coil x-axis location      |         0.3766         |     start of coil location in sim      |
+|   Vaccum Permeability Constant  | 1.2566370614359173e-06 |                  H/m                   |
+| Maximum Turns in a single layer |           86           |                 Turns                  |
+|      Number of coil layers      |           2            |                 layers                 |
+|     Ambient Coil Temperature    |           25           |                   C                    |
+|       Max Coil Temperature      |           60           |                   C                    |
+|         Max Coil Current        |          450           |                   A                    |
+|           Max On Time           | 0.0005160099103602579  |                   s                    |
++---------------------------------+------------------------+----------------------------------------+
+
+
++-------+---------+--------------------+--------------------+--------------------+-----------------------+--------------------+
+| Stage | On Time |   Max Coil Temp    |  Exit Cap Voltage  |    Peak Current    |     Min Inductance    |   Exit Velocity    |
++-------+---------+--------------------+--------------------+--------------------+-----------------------+--------------------+
+|   0   |    0    | 38.38052085204248  | 171.96071223431107 | 278.7146171714009  | 5.635692189665741e-05 | 100.93928404800182 |
+|   1   |    0    | 26.525524468592153 | 193.5470312652719  | 143.67413090447337 | 5.635692189665741e-05 | 112.76360174732083 |
+|   2   |    0    | 26.190362397722367 | 194.5662753190003  | 133.32825884264122 | 5.635692189665741e-05 | 121.96189233188706 |
+|   3   |    0    | 25.990559937543708 | 195.21239957348135 | 126.0878505945207  | 5.635692189665741e-05 | 129.61871998484258 |
+|   4   |    0    | 25.852330040305844 | 195.6805658946579  | 120.37346813036382 | 5.635692189665741e-05 | 136.20856644427195 |
+|   5   |    0    | 25.750349460173027 | 196.0408961876018  | 115.69448788457227 | 5.635692189665741e-05 |  142.010900040316  |
+|   6   |    0    | 25.676325176243722 | 196.31700374946416 | 112.1378574515318  | 5.635692189665741e-05 | 147.24132499328368 |
+|   7   |    0    | 25.620245730116324 | 196.53208685797816 | 109.28311812254402 | 5.635692189665741e-05 | 152.03850574255358 |
++-------+---------+--------------------+--------------------+--------------------+-----------------------+--------------------+
