@@ -1,0 +1,315 @@
+# Multi-Stage Linear Accelerator Simulator — Rebuild Plan
+
+## Purpose
+
+Ballpark design tool for a chained solenoid (coilgun) accelerator. It exists to lock in
+physical design parameters before metal gets cut:
+
+- solenoid geometry — turns, wire gauge, coil length, bore
+- projectile geometry and mass
+- per-stage fire timing, stage spacing, capacitor bank sizing
+
+It is explicitly **not** a high-fidelity FEA model. The target is "right order of
+magnitude, right trends, right trade-offs."
+
+## The design premise under test
+
+Each stage's coil is **twice the projectile length**. An ingress sensor at the coil mouth
+fires the coil; the coil shuts off once the projectile has fully passed the sensor (i.e.
+travelled one projectile length). Because the coil is 2x the projectile, the projectile
+has not yet reached coil centre at shutoff — the intent is to give the coil's field time
+to collapse before the projectile crosses centre, avoiding suck-back.
+
+**The tool must be able to falsify this.** The v1 simulator could not: it modelled coil
+turn-off as instantaneous and hard-zeroed any force past coil centre, so suck-back was
+defined out of existence rather than simulated. Validating the 2:1 ratio is the single
+most important capability of the rebuild.
+
+---
+
+## What was wrong with v1
+
+Recorded so the rewrite doesn't quietly reintroduce any of it.
+
+| # | Issue | Impact |
+|---|---|---|
+| 1 | Force used an axial-gap reluctance-actuator formula with a *radial* clearance substituted for the gap | Force independent of position; magnitude wrong by ~100x; `1/g^2` on a meaningless parameter |
+| 2 | Force hard-zeroed past coil centre | Suck-back unmodellable |
+| 3 | Turn-off modelled as `coil_time = 0`, giving `i = 0` in one 1 us step | Field-collapse time — the entire design question — not modelled |
+| 4 | `L` scaled by full bulk `mu_r = 100` on slug insertion | ~10x too high; circuit flips damping regime mid-flight |
+| 5 | Closed-form constant-L RLC re-solved each step with a new L | Not a solution of the ODE; motional back-EMF absent; energy not conserved |
+| 6 | Capacitor voltage computed post-hoc, never fed back | Every re-fire restarts from a full bank |
+| 7 | No saturation | `F ~ i^2` unbounded |
+| 8 | Projectile modelled as a point; no `proj_len`; mass hardcoded in 4 places | 2:1 ratio unsweepable |
+| 9 | Force zero between coils | Stage spacing has no effect except transit time; optimiser drives it to zero |
+| 10 | Thermal integrated on `coil_time`, which resets to 0 | Temperature collapses toward -234 C at every switch event |
+| 11 | Two divergent copies of the run loop (`Exec` / `Exec2`) | `Optimize` ran the older, buggier one |
+| 12 | `getCurrent` sign error + reversed `dt` in the charge integral | Two bugs cancelling |
+
+Symptom that ties it together: the v1 default config reported **101 m/s from a single
+stage** and a capacitor energy drop of 31 J for 28.5 J of kinetic energy — ~92%
+efficiency before I^2R. Real single-stage coilguns run 1-5%.
+
+---
+
+## Physics model
+
+### State
+
+Global: `x` (projectile position), `v` (velocity), `t`.
+Per stage: `i` (coil current), `Vc` (capacitor voltage), `switch_state`.
+
+Integrated with RK4 at fixed `dt`, with a startup assertion that `dt` is well below
+`L_min/R`, `1/omega`, and `x_resolution/v_max`.
+
+### Flux linkage (nonlinear)
+
+Because saturation is in scope, the magnetic system is described by flux linkage
+`lambda(x, i)`, not by `L(x)`. Three distinct quantities follow, and using the wrong one
+in the wrong place is the classic error here:
+
+| Used for | Quantity |
+|---|---|
+| coefficient on `di/dt` | incremental inductance `L_inc = d(lambda)/di` |
+| back-EMF | `d(lambda)/dx * v` |
+| force | co-energy gradient `d/dx of integral(0..i) lambda di'` |
+
+Model:
+
+```
+fill(x)      = (axial overlap of slug and coil / coil length) * (A_proj / A_bore)
+lambda(x,i)  = L_air*i  +  (mu_eff - 1)*L_air*fill(x)*i_sat*tanh(i / i_sat)
+```
+
+The air-core term stays linear (air does not saturate); only the slug's contribution
+rolls off. Both partials are closed-form, so no numerical differentiation inside the RK4
+inner loop. Corners of `fill(x)` are smoothed so RK4 does not see a discontinuity.
+
+Force, from co-energy:
+
+```
+W'(x,i) = 0.5*L_air*i^2 + (mu_eff-1)*L_air*fill(x)*i_sat^2*ln(cosh(i/i_sat))
+F       = dW'/dx = (mu_eff-1)*L_air*fill'(x)*i_sat^2*ln(cosh(i/i_sat))
+```
+
+**Linear-limit check.** As `i << i_sat`, `ln(cosh u) -> u^2/2`, so
+
+```
+F -> 0.5*i^2*L_air*(mu_eff-1)*fill'(x)  ==  0.5*i^2*dL/dx
+```
+
+which is exactly the linear result for `L(x) = L_air*(1 + (mu_eff-1)*fill(x))`. The
+saturating model is therefore a strict generalisation, and `--no-saturation` recovers the
+linear model as a genuine special case rather than a separate code path. This identity is
+a unit test (Phase 4).
+
+**Suck-back falls out for free.** `fill'(x) > 0` on entry (force forward), `fill'(x) < 0`
+on exit (force backward). No special-casing.
+
+### Effective permeability
+
+Bulk `mu_r` is wrong for a short rod in an open magnetic circuit — the demagnetising
+factor dominates. For a rod of aspect ratio `m = proj_len / proj_dia`:
+
+```
+N_d     ~ (1/m^2) * (ln(2m) - 1)
+mu_eff  = mu_r / (1 + N_d*(mu_r - 1))
+```
+
+At the current design point (17.5 mm x 6 mm slug, carbon steel `mu_r = 100`):
+`m = 2.92`, `N_d = 0.090`, **`mu_eff = 10.1`** — not 100.
+
+`mu_eff` now depends on slug geometry, so aspect ratio becomes a sweepable design
+variable.
+
+### Saturation — why it dominates here
+
+```
+i_sat = B_sat * l_coil / (mu_0 * mu_eff * N)
+```
+
+At `B_sat = 1.6 T`, `l = 35 mm`, `N = 150`, `mu_eff = 10.1`: **`i_sat = 29 A`**.
+
+The v1 design point runs at 280 A peak. Linear theory implies:
+
+| current | implied B in slug | vs B_sat |
+|---|---|---|
+| 29 A | 1.6 T | 1.0x |
+| 100 A | 5.5 T | 3.4x |
+| 280 A | 15.3 T | **9.5x** |
+| 450 A | 24.5 T | **15.3x** |
+
+The current operating point is roughly an order of magnitude into saturation. Expect the
+rebuilt model to predict substantially lower performance, and expect "add more current"
+to stop being a useful optimisation direction. Getting this right is the difference
+between a tool that guides the design and one that flatters it.
+
+### Circuit
+
+```
+di/dt = (Vc - i*R(T) - i*(d lambda/dx)*v) / L_inc(x,i)
+dVc/dt = -i / C
+dv/dt  = F / m
+dx/dt  = v
+```
+
+Capacitor depletion and motional back-EMF are now inside the loop, so energy balances by
+construction rather than by accident.
+
+### Switch model
+
+Three states:
+
+- `ON` — capacitor drives the coil
+- `FREEWHEEL` — turn-off commanded; source replaced by `-V_diode`, current decays on `L/R`
+- `OFF` — current below threshold
+
+The `FREEWHEEL` state is what makes the design premise testable. At `L ~ 5.6e-5 H` and
+`R ~ 0.65 ohm` the decay constant is ~86 us; at 150 m/s the projectile covers 13 mm in a
+single tau, against a 17.5 mm half-coil. **This may show that 2:1 is not enough**, which
+is precisely the question the tool exists to answer.
+
+### Control
+
+Models the real trigger chain: ingress sensor at coil mouth, shutoff when the nose has
+travelled `proj_len` past it, plus configurable `sensor_latency` and `switch_latency`.
+At these velocities tens of microseconds of gate-driver delay is millimetres of travel.
+Optional prefire lead, computed against a live peak-current estimate rather than a
+snapshot taken at construction time.
+
+---
+
+## Architecture
+
+```
+la/config.py       dataclasses + YAML/JSON load
+la/wire.py         AWG table (bare + insulated OD), R(T)
+la/geometry.py     coil/projectile -> layers, wire length, R, L_air (Wheeler)
+la/magnetics.py    mu_eff, fill(x), lambda(x,i), L_inc, d lambda/dx, force
+la/circuit.py      per-stage state, switch machine
+la/control.py      sensors, trigger logic, latencies
+la/engine.py       RK4 integrator, run loop, energy accounting
+la/calibration.py  measurement load, correction factors, compare/fit
+la/report.py       tables, plots, energy audit
+la/cli.py          argparse entry point
+tests/
+```
+
+numpy throughout. Physics modules take calibration scale factors as constructor
+arguments — they never read files, and never branch on whether measurements exist.
+
+---
+
+## Calibration against real hardware
+
+No bench data yet. The tool must run correctly with none, and accept it incrementally as
+the prototype comes together.
+
+`measurements/*.yaml`, every field optional:
+
+```yaml
+coil_id: stage0
+measured:
+  L_air:         58.2e-6     # H, LCR meter, no slug
+  L_slug_in:     410e-6      # H, slug centred
+  R_dc:          0.671       # ohm, 4-wire
+  peak_current:  262         # A, from scope
+  exit_velocity: 41.3        # m/s, chrono
+conditions:
+  V0: 200
+  C:  0.006
+  ambient_C: 22
+traces:
+  current: traces/stage0_i.csv   # t,i
+```
+
+Correction factors (`L_scale = L_measured/L_predicted`, `R_scale`, ...) default to `1.0`
+when absent, so an empty `measurements/` directory reproduces uncalibrated behaviour
+exactly.
+
+Two CLI modes:
+
+- `--compare` — predicted vs measured side by side, % error, per stage
+- `--fit` — least-squares fit of `mu_eff` and `R` to a scope trace of `i(t)`
+
+**Highest-value first measurement:** `L_air` and `L_slug_in` with an LCR meter and a
+slug. Five minutes of bench time directly settles the `mu_eff` question, which is the
+largest remaining uncertainty in the model.
+
+---
+
+## Phases
+
+Each phase leaves the tool runnable. Separate commits, straight to `main`.
+
+### Phase 0 — Safety net
+- [ ] `requirements.txt` (prettytable, matplotlib, numpy, pyyaml, pytest)
+- [ ] Capture v1 output across several configs to `baseline/` — wrong numbers, but the
+      reference for "did this change what I expected"
+
+### Phase 1 — Structural floor
+No physics changes.
+- [ ] `la/` package skeleton
+- [ ] Config dataclasses replace string-keyed dicts (kills the `tmp = cfg` aliasing bug)
+- [ ] Add `proj_len`, `proj_density`, `mu_r`, `B_sat`, `switch_latency`, `diode_vf` —
+      defined now, wired up in Phase 2. Mass becomes derived.
+- [ ] Delete `Exec`, `timeToTargetI`, `Projectile.update`, `CoilCircuit.StepCircuit`
+- [ ] Reporting out of constructors (`Coil.__init__` currently prints a 25-row table)
+- [ ] Fix global-`sim`-instead-of-`self`, and `bool("False") == True` in argparse
+- [ ] `wire.py` + `geometry.py` land in final form (they survive Phase 2 unchanged)
+
+### Phase 2 — Physics core
+- [ ] 2a RK4 state-space integration; delete `getCurrent`
+- [ ] 2b Force from co-energy gradient; delete the reluctance formula and `airGap`
+- [ ] 2c `lambda(x,i)` from slug/coil overlap; delete the `exp(-log(mu_r)/l * x)` ramp
+- [ ] 2d `mu_eff` via demagnetising factor + `tanh` saturation law
+- [ ] 2e Switch model with freewheel decay
+- [ ] 2f Trigger/control with sensor and switch latency
+
+### Phase 3 — Supporting models
+- [ ] Insulated magnet-wire OD (26 AWG: 0.43 mm, not 0.404)
+- [ ] Wire length uses layer *centres*, not inner surfaces
+- [ ] `R(T) = R_20*(1 + 0.00393*(T-20))` — ~16% over a 40 C rise
+- [ ] Thermal integrated on absolute time, gated on coil-on. Onderdonk math itself is
+      correct — leave it alone
+- [ ] Reporting fixes: `s[st]` indexing samples by stage number; "Min Inductance" reading
+      `s[0]`; `plotData` always using `abstimes[0]`
+- [ ] Run length from geometry, not `while x < 1`; stall guard
+
+### Phase 4 — Validation
+- [ ] Energy audit printed every run: `E_cap_spent`, `E_kinetic`, `E_resistive`,
+      `E_magnetic_residual`, `E_diode`. Assert closure < 1%
+- [ ] Efficiency as a headline number (sanity: 1-5%)
+- [ ] pytest:
+  - [ ] constant-L RLC integration vs closed-form (v1's `getCurrent` math is a valid
+        oracle for constant L)
+  - [ ] **zero net impulse** — a slug passing fully through a DC-energised coil gains
+        ~zero net momentum. Hard invariant; strongest test that suck-back is right
+  - [ ] `lambda(x,i)` symmetric about coil centre
+  - [ ] **linear limit** — saturating vs non-saturating agree < 0.1% at `i = 0.01*i_sat`
+  - [ ] Wheeler and Onderdonk against published reference values
+  - [ ] energy closure over a full multi-stage run
+- [ ] Convergence: halve `dt`, exit velocity moves < 0.5%
+
+### Phase 5 — Optimiser
+- [ ] Performance: numpy arrays / flat records, not one dict per stage per timestep;
+      `record=False` summary-only mode
+- [ ] Rewrite `Optimize` (currently crashes: missing `self.`, list indexed by string)
+- [ ] Sweeps over turns, gauge, coil length, **coil/projectile length ratio**, stage
+      spacing, prefire lead, cap voltage
+- [ ] Fix the `main` block building 10 identical profiles (`turns` hardcoded to 150 with
+      the variation commented out)
+
+---
+
+## Open questions
+
+- `B_sat = 1.6 T` assumes generic carbon steel. Worth pinning to an actual grade once the
+  projectile material is chosen.
+- The `tanh` saturation law is chosen for smoothness and analytic differentiability, not
+  because it is the true B-H curve. If bench data shows it matters, a Froehlich or
+  Jiles-Atherton fit is the upgrade path.
+- Eddy currents in the projectile are not modelled. At these timescales they are probably
+  not negligible; deferred until there is measured data to justify the complexity.
+- No barrel friction or drag. Assumed small against the magnetic forces; revisit if
+  chrono data disagrees with predictions.
