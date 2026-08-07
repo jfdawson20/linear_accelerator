@@ -157,6 +157,8 @@ class Simulation:
                 projectile=config.projectile,
                 saturation=config.saturation,
                 coupling=config.coupling,
+                flux_return=config.flux_return,
+                l_shell_factor=config.l_shell_factor,
             )
             for stage in config.stages
         ]

@@ -113,18 +113,39 @@ class MagneticModel:
     #  "mean" references the mean winding radius instead, penalising depth.
     #  The truth lies between; running both bounds the answer.
     coupling: str = "bore"
+    #  Ferromagnetic flux return (shell + end caps) around the coil.
+    #
+    #  CRUDE PARAMETERISATION, not a first-principles model. The
+    #  demagnetising factor assumes an isolated rod in free space -- an open
+    #  magnetic circuit. A shell closes that circuit, so its first-order effect
+    #  is to reduce the effective demagnetising factor:
+    #
+    #      N_d_eff = N_d * (1 - flux_return)
+    #
+    #  flux_return = 0 is the bare solenoid; 1.0 is a perfect closed circuit
+    #  where mu_eff -> mu_r. A real shell is somewhere between, and where
+    #  exactly depends on shell cross-section, joint gaps and its own
+    #  saturation -- none of which are modelled here.
+    #
+    #  The shell also raises the coil's own inductance, which Wheeler does not
+    #  account for. l_shell_factor scales L_air for that.
+    #
+    #  Both should be calibrated: measure L with and without the shell fitted.
+    flux_return: float = 0.0
+    l_shell_factor: float = 1.0
 
     def __post_init__(self) -> None:
-        self.l_air = self.coil.inductance_air * self.l_air_scale
+        if not 0.0 <= self.flux_return < 1.0:
+            raise ValueError("flux_return must be in [0, 1)")
+        self.l_air = self.coil.inductance_air * self.l_air_scale * self.l_shell_factor
         if self.mu_eff_override is not None:
             self.mu_eff = self.mu_eff_override
         else:
-            self.mu_eff = (
-                effective_permeability(
-                    self.projectile.mu_r, self.projectile.aspect_ratio
-                )
-                * self.mu_eff_scale
+            nd = demagnetising_factor(self.projectile.aspect_ratio) * (
+                1.0 - self.flux_return
             )
+            mu_r = self.projectile.mu_r
+            self.mu_eff = (mu_r / (1.0 + nd * (mu_r - 1.0))) * self.mu_eff_scale
         if self.fringe_width is None:
             self.fringe_width = 0.5 * self.coil.inner_radius
         if self.coupling not in ("bore", "mean"):

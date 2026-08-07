@@ -67,6 +67,8 @@ DEFAULTS: dict[str, Any] = {
     "switch_latency": 0.0,
     "saturation": True,
     "coupling": "bore",
+    "flux_return": 0.0,
+    "l_shell_factor": 1.0,
     "dt": 1e-5,
     "ambient": 25.0,
     "max_temp": 60.0,
@@ -127,6 +129,8 @@ def build_config(**overrides: Any) -> SimConfig:
         dt=p["dt"],
         saturation=p["saturation"],
         coupling=p["coupling"],
+        flux_return=p["flux_return"],
+        l_shell_factor=p["l_shell_factor"],
         record=False,
     )
 

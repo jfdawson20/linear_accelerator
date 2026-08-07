@@ -50,6 +50,8 @@ class StageCircuit:
     l_air_scale: float = 1.0
     r_scale: float = 1.0
     coupling: str = "bore"
+    flux_return: float = 0.0
+    l_shell_factor: float = 1.0
 
     def __post_init__(self) -> None:
         self.magnetics = MagneticModel(
@@ -60,6 +62,8 @@ class StageCircuit:
             l_air_scale=self.l_air_scale,
             mu_eff_override=self.mu_eff_override,
             coupling=self.coupling,
+            flux_return=self.flux_return,
+            l_shell_factor=self.l_shell_factor,
         )
         self.r20 = self.config.coil.resistance() * self.r_scale
         # Thermal mass of the winding, for adiabatic heating.

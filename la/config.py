@@ -131,6 +131,8 @@ class SimConfig:
     dt: float = 1e-6  # s
     saturation: bool = True
     coupling: str = "bore"  # "bore" | "mean"; see MagneticModel.coupling
+    flux_return: float = 0.0  # ferromagnetic shell; see MagneticModel
+    l_shell_factor: float = 1.0
     record: bool = True  # False -> summary statistics only, no per-step trace
 
     def __post_init__(self) -> None:
