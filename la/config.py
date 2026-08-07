@@ -99,6 +99,11 @@ class ControlConfig:
     # Turn-off as a fraction of the distance to force reversal, (Lc+Lp)/2.
     # None keeps the original rule: turn off once the tail clears the sensor.
     turn_off_fraction: float | None = None
+    # Multiplier on the prefire lead time. 1.0 aims for peak current exactly as
+    # the nose reaches the coil mouth; >1 fires earlier, <1 later. Peak-at-mouth
+    # is a heuristic, not an optimum: force is small at the mouth and peaks a
+    # little way inside, so the best lead is not obviously 1.0.
+    prefire_scale: float = 1.0
 
 
 @dataclass(frozen=True)

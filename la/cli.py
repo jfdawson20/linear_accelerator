@@ -121,6 +121,9 @@ def build_parser() -> argparse.ArgumentParser:
                       help="sensor detect to gate command, s")
     ctrl.add_argument("--switch-latency", type=float, default=0.0,
                       help="gate command to conduction, s")
+    ctrl.add_argument("--prefire-scale", type=float, default=1.0,
+                      help="multiplier on the prefire lead time (1.0 = peak "
+                           "current as the nose reaches the coil mouth)")
     ctrl.add_argument("--turn-off-fraction", type=float, default=None,
                       help="turn off at this fraction of the distance to force "
                            "reversal, (Lc+Lp)/2. Default: when the tail clears "
@@ -186,6 +189,7 @@ def config_from_args(args: argparse.Namespace) -> SimConfig:
             prefire=not args.no_prefire,
             sensor_latency=args.sensor_latency,
             turn_off_fraction=args.turn_off_fraction,
+            prefire_scale=args.prefire_scale,
         ),
         thermal=ThermalConfig(ambient_c=args.ambient, max_c=args.max_temp),
         dt=args.dt,
@@ -254,6 +258,7 @@ def run_sweep(args: argparse.Namespace) -> int:
         sensor_latency=args.sensor_latency,
         switch_latency=args.switch_latency,
         turn_off_fraction=args.turn_off_fraction,
+        prefire_scale=args.prefire_scale,
         topology=args.topology,
         device_drop=args.device_drop,
         diode_vf=args.diode_vf,
