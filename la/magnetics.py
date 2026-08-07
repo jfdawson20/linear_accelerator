@@ -106,6 +106,13 @@ class MagneticModel:
     l_air_scale: float = 1.0
     mu_eff_scale: float = 1.0
     mu_eff_override: float | None = None
+    #  How much of the coil's flux the slug actually intercepts.
+    #  "bore" assumes every turn couples to the slug as well as the innermost
+    #  one, which over-rewards deep multilayer windings: an outer layer at
+    #  40 mm diameter has flux paths that largely bypass a 6 mm slug.
+    #  "mean" references the mean winding radius instead, penalising depth.
+    #  The truth lies between; running both bounds the answer.
+    coupling: str = "bore"
 
     def __post_init__(self) -> None:
         self.l_air = self.coil.inductance_air * self.l_air_scale
@@ -120,9 +127,15 @@ class MagneticModel:
             )
         if self.fringe_width is None:
             self.fringe_width = 0.5 * self.coil.inner_radius
-        # Fraction of the bore cross-section the slug occupies.
-        self.area_ratio = self.projectile.area / self.coil.bore_area
-        if self.area_ratio > 1.0:
+        if self.coupling not in ("bore", "mean"):
+            raise ValueError(f"unknown coupling {self.coupling!r}")
+        # Fraction of the coil's cross-section the slug occupies.
+        if self.coupling == "bore":
+            reference_area = self.coil.bore_area
+        else:
+            reference_area = math.pi * self.coil.mean_radius**2
+        self.area_ratio = self.projectile.area / reference_area
+        if self.projectile.area > self.coil.bore_area:
             raise ValueError("projectile diameter exceeds coil bore")
         self.i_sat = self._saturation_current()
 

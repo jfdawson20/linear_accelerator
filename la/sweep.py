@@ -65,6 +65,7 @@ DEFAULTS: dict[str, Any] = {
     "sensor_latency": 0.0,
     "switch_latency": 0.0,
     "saturation": True,
+    "coupling": "bore",
     "dt": 1e-5,
     "ambient": 25.0,
     "max_temp": 60.0,
@@ -123,6 +124,7 @@ def build_config(**overrides: Any) -> SimConfig:
         thermal=ThermalConfig(ambient_c=p["ambient"], max_c=p["max_temp"]),
         dt=p["dt"],
         saturation=p["saturation"],
+        coupling=p["coupling"],
         record=False,
     )
 

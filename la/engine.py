@@ -156,6 +156,7 @@ class Simulation:
                 config=stage,
                 projectile=config.projectile,
                 saturation=config.saturation,
+                coupling=config.coupling,
             )
             for stage in config.stages
         ]
