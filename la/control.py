@@ -41,7 +41,7 @@ class StageController:
     """
 
     sensor_position: float  # m, absolute x of the ingress sensor
-    projectile_length: float  # m, travel from trigger to "completely inside"
+    release_travel: float  # m, nose travel past the sensor before turn-off
     lead_time: float = 0.0  # s, prefire lead (0 disables prefire)
     sensor_latency: float = 0.0  # s, detection -> gate command
     turn_on_latency: float = 0.0  # s, gate command -> conduction
@@ -56,8 +56,8 @@ class StageController:
 
     @property
     def release_position(self) -> float:
-        """Nose position at which the tail has cleared the sensor."""
-        return self.sensor_position + self.projectile_length
+        """Nose position at which turn-off is commanded."""
+        return self.sensor_position + self.release_travel
 
     def update(self, t: float, x: float, v: float) -> bool:
         """Advance the trigger state. Returns the current gate command.
@@ -94,6 +94,17 @@ class StageController:
         return False
 
 
+def reversal_travel(coil_length: float, projectile_length: float) -> float:
+    """Nose travel past the coil mouth at which force reverses.
+
+    Not the coil midpoint: with an extended slug the axis of symmetry is where
+    the slug's centre meets the coil's centre, so it is (Lc + Lp)/2. This is
+    the real deadline the field has to collapse before, and the natural unit
+    for expressing turn-off timing.
+    """
+    return (coil_length + projectile_length) / 2.0
+
+
 def build_controllers(
     stages,
     projectile_length: float,
@@ -101,18 +112,31 @@ def build_controllers(
     sensor_latency: float,
     sensor_offset: float,
     lead_times,
+    turn_off_fraction: float | None = None,
 ) -> list[StageController]:
     """One controller per stage.
 
     `lead_times` comes from each stage's circuit (time from firing to peak
     current), so prefire aims to have current peaking as the projectile arrives.
+
+    `turn_off_fraction` expresses turn-off as a fraction of the distance to
+    force reversal: 1.0 commands turn-off exactly as force reverses (far too
+    late, since the field then needs time to collapse), and smaller values
+    shut down earlier. None keeps the original design rule -- turn off once the
+    tail has cleared the sensor, i.e. one projectile length of travel.
     """
     controllers = []
     for stage, lead in zip(stages, lead_times):
+        if turn_off_fraction is None:
+            travel = projectile_length
+        else:
+            travel = turn_off_fraction * reversal_travel(
+                stage.coil.length, projectile_length
+            )
         controllers.append(
             StageController(
                 sensor_position=stage.position + sensor_offset,
-                projectile_length=projectile_length,
+                release_travel=travel,
                 lead_time=lead if prefire else 0.0,
                 sensor_latency=sensor_latency,
                 turn_on_latency=stage.switch.turn_on_latency,

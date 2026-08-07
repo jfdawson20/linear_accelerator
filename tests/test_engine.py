@@ -148,7 +148,7 @@ def test_late_turn_off_produces_suck_back_and_costs_velocity():
     good_result = good.run()
 
     bad = Simulation(make_config(1))
-    bad.controllers[0].projectile_length *= 3.0  # hold the coil on far too long
+    bad.controllers[0].release_travel *= 3.0  # hold the coil on far too long
     bad_result = bad.run()
 
     assert bad_result.suck_back_impulse()[0] < -1e-3

@@ -166,6 +166,7 @@ class Simulation:
             sensor_latency=config.control.sensor_latency,
             sensor_offset=config.control.sensor_offset,
             lead_times=[c.time_to_peak_current() for c in self.circuits],
+            turn_off_fraction=config.control.turn_off_fraction,
         )
         self.n = len(self.circuits)
         self.kernel = StageKernel(

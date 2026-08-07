@@ -61,6 +61,7 @@ DEFAULTS: dict[str, Any] = {
     "topology": "diode",      # "diode" | "ahb" (asymmetric half bridge)
     "device_drop": 0.0,       # V per conducting device
     "prefire": True,
+    "turn_off_fraction": None,  # None = tail clears sensor; else fraction of (Lc+Lp)/2
     "sensor_latency": 0.0,
     "switch_latency": 0.0,
     "saturation": True,
@@ -115,7 +116,9 @@ def build_config(**overrides: Any) -> SimConfig:
         projectile=projectile,
         stages=stages,
         control=ControlConfig(
-            prefire=p["prefire"], sensor_latency=p["sensor_latency"]
+            prefire=p["prefire"],
+            sensor_latency=p["sensor_latency"],
+            turn_off_fraction=p["turn_off_fraction"],
         ),
         thermal=ThermalConfig(ambient_c=p["ambient"], max_c=p["max_temp"]),
         dt=p["dt"],

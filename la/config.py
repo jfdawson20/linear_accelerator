@@ -96,6 +96,9 @@ class ControlConfig:
     prefire: bool = True
     sensor_latency: float = 0.0  # s, detection -> gate command
     sensor_offset: float = 0.0  # m, sensor position relative to coil mouth
+    # Turn-off as a fraction of the distance to force reversal, (Lc+Lp)/2.
+    # None keeps the original rule: turn off once the tail clears the sensor.
+    turn_off_fraction: float | None = None
 
 
 @dataclass(frozen=True)

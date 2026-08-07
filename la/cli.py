@@ -121,6 +121,10 @@ def build_parser() -> argparse.ArgumentParser:
                       help="sensor detect to gate command, s")
     ctrl.add_argument("--switch-latency", type=float, default=0.0,
                       help="gate command to conduction, s")
+    ctrl.add_argument("--turn-off-fraction", type=float, default=None,
+                      help="turn off at this fraction of the distance to force "
+                           "reversal, (Lc+Lp)/2. Default: when the tail clears "
+                           "the sensor")
 
     model = p.add_argument_group("model")
     model.add_argument("--no-saturation", action="store_true",
@@ -179,7 +183,9 @@ def config_from_args(args: argparse.Namespace) -> SimConfig:
         projectile=projectile,
         stages=stages,
         control=ControlConfig(
-            prefire=not args.no_prefire, sensor_latency=args.sensor_latency
+            prefire=not args.no_prefire,
+            sensor_latency=args.sensor_latency,
+            turn_off_fraction=args.turn_off_fraction,
         ),
         thermal=ThermalConfig(ambient_c=args.ambient, max_c=args.max_temp),
         dt=args.dt,
@@ -247,6 +253,7 @@ def run_sweep(args: argparse.Namespace) -> int:
         max_temp=args.max_temp,
         sensor_latency=args.sensor_latency,
         switch_latency=args.switch_latency,
+        turn_off_fraction=args.turn_off_fraction,
         topology=args.topology,
         device_drop=args.device_drop,
         diode_vf=args.diode_vf,
