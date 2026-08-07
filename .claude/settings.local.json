@@ -7,7 +7,14 @@
       "Bash(.venv/bin/python -m pytest -q)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(.venv/bin/python -m pytest tests/test_magnetics.py -q)"
+      "Bash(.venv/bin/python -m pytest tests/test_magnetics.py -q)",
+      "Bash(.venv/bin/python -m la.cli run -s 8)",
+      "Bash(.venv/bin/python -m la.cli run -s 8 --no-saturation)",
+      "Bash(.venv/bin/python -m la.cli run -s 8 --no-prefire)",
+      "Bash(.venv/bin/python -m la.cli design)",
+      "Bash(.venv/bin/python -m la.cli run -s 1)",
+      "Bash(.venv/bin/python -m la.cli run -s 1 --dt 5e-5)",
+      "Bash(git rm *)"
     ]
   }
 }
